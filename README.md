@@ -1,1 +1,2 @@
 # EXTRACTION_DATA_DRUG_CHEMICALS
+![NER Flowchart](FlowChart.png)
