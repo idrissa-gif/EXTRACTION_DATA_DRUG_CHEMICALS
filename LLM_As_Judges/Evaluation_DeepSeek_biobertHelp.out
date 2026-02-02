@@ -1,0 +1,119 @@
+nohup: ignoring input
+Loading checkpoint shards:   0%|          | 0/2 [00:00<?, ?it/s]Loading checkpoint shards:  50%|█████     | 1/2 [00:04<00:04,  4.57s/it]Loading checkpoint shards: 100%|██████████| 2/2 [00:07<00:00,  3.83s/it]Loading checkpoint shards: 100%|██████████| 2/2 [00:07<00:00,  3.94s/it]
+/people/dicko/miniconda3/envs/DataSR/lib/python3.12/site-packages/transformers/generation/configuration_utils.py:601: UserWarning: `do_sample` is set to `False`. However, `temperature` is set to `0.6` -- this flag is only used in sample-based generation modes. You should set `do_sample=True` or unset `temperature`.
+  warnings.warn(
+/people/dicko/miniconda3/envs/DataSR/lib/python3.12/site-packages/transformers/generation/configuration_utils.py:606: UserWarning: `do_sample` is set to `False`. However, `top_p` is set to `0.95` -- this flag is only used in sample-based generation modes. You should set `do_sample=True` or unset `top_p`.
+  warnings.warn(
+Starting from v4.46, the `logits` model output will have the same type as the model (except at train time, where it will always be FP32)
+/people/dicko/miniconda3/envs/DataSR/lib/python3.12/site-packages/seqeval/metrics/sequence_labeling.py:171: UserWarning: Quinine seems not to be NE tag.
+  warnings.warn('{} seems not to be NE tag.'.format(chunk))
+/people/dicko/miniconda3/envs/DataSR/lib/python3.12/site-packages/seqeval/metrics/sequence_labeling.py:171: UserWarning: is seems not to be NE tag.
+  warnings.warn('{} seems not to be NE tag.'.format(chunk))
+/people/dicko/miniconda3/envs/DataSR/lib/python3.12/site-packages/seqeval/metrics/sequence_labeling.py:171: UserWarning: known seems not to be NE tag.
+  warnings.warn('{} seems not to be NE tag.'.format(chunk))
+/people/dicko/miniconda3/envs/DataSR/lib/python3.12/site-packages/seqeval/metrics/sequence_labeling.py:171: UserWarning: to seems not to be NE tag.
+  warnings.warn('{} seems not to be NE tag.'.format(chunk))
+/people/dicko/miniconda3/envs/DataSR/lib/python3.12/site-packages/seqeval/metrics/sequence_labeling.py:171: UserWarning: block seems not to be NE tag.
+  warnings.warn('{} seems not to be NE tag.'.format(chunk))
+/people/dicko/miniconda3/envs/DataSR/lib/python3.12/site-packages/seqeval/metrics/sequence_labeling.py:171: UserWarning: voltage seems not to be NE tag.
+  warnings.warn('{} seems not to be NE tag.'.format(chunk))
+/people/dicko/miniconda3/envs/DataSR/lib/python3.12/site-packages/seqeval/metrics/sequence_labeling.py:171: UserWarning: - seems not to be NE tag.
+  warnings.warn('{} seems not to be NE tag.'.format(chunk))
+/people/dicko/miniconda3/envs/DataSR/lib/python3.12/site-packages/seqeval/metrics/sequence_labeling.py:171: UserWarning: , seems not to be NE tag.
+  warnings.warn('{} seems not to be NE tag.'.format(chunk))
+/people/dicko/miniconda3/envs/DataSR/lib/python3.12/site-packages/seqeval/metrics/sequence_labeling.py:171: UserWarning: calcium seems not to be NE tag.
+  warnings.warn('{} seems not to be NE tag.'.format(chunk))
+/people/dicko/miniconda3/envs/DataSR/lib/python3.12/site-packages/seqeval/metrics/sequence_labeling.py:171: UserWarning: and seems not to be NE tag.
+  warnings.warn('{} seems not to be NE tag.'.format(chunk))
+/people/dicko/miniconda3/envs/DataSR/lib/python3.12/site-packages/seqeval/metrics/sequence_labeling.py:171: UserWarning: ATP seems not to be NE tag.
+  warnings.warn('{} seems not to be NE tag.'.format(chunk))
+/people/dicko/miniconda3/envs/DataSR/lib/python3.12/site-packages/seqeval/metrics/sequence_labeling.py:171: UserWarning: sensitive seems not to be NE tag.
+  warnings.warn('{} seems not to be NE tag.'.format(chunk))
+/people/dicko/miniconda3/envs/DataSR/lib/python3.12/site-packages/seqeval/metrics/sequence_labeling.py:171: UserWarning: K seems not to be NE tag.
+  warnings.warn('{} seems not to be NE tag.'.format(chunk))
+/people/dicko/miniconda3/envs/DataSR/lib/python3.12/site-packages/seqeval/metrics/sequence_labeling.py:171: UserWarning: ( seems not to be NE tag.
+  warnings.warn('{} seems not to be NE tag.'.format(chunk))
+/people/dicko/miniconda3/envs/DataSR/lib/python3.12/site-packages/seqeval/metrics/sequence_labeling.py:171: UserWarning: + seems not to be NE tag.
+  warnings.warn('{} seems not to be NE tag.'.format(chunk))
+/people/dicko/miniconda3/envs/DataSR/lib/python3.12/site-packages/seqeval/metrics/sequence_labeling.py:171: UserWarning: ) seems not to be NE tag.
+  warnings.warn('{} seems not to be NE tag.'.format(chunk))
+/people/dicko/miniconda3/envs/DataSR/lib/python3.12/site-packages/seqeval/metrics/sequence_labeling.py:171: UserWarning: channels seems not to be NE tag.
+  warnings.warn('{} seems not to be NE tag.'.format(chunk))
+/people/dicko/miniconda3/envs/DataSR/lib/python3.12/site-packages/seqeval/metrics/sequence_labeling.py:171: UserWarning: while seems not to be NE tag.
+  warnings.warn('{} seems not to be NE tag.'.format(chunk))
+/people/dicko/miniconda3/envs/DataSR/lib/python3.12/site-packages/seqeval/metrics/sequence_labeling.py:171: UserWarning: 4 seems not to be NE tag.
+  warnings.warn('{} seems not to be NE tag.'.format(chunk))
+/people/dicko/miniconda3/envs/DataSR/lib/python3.12/site-packages/seqeval/metrics/sequence_labeling.py:171: UserWarning: aminopyridine seems not to be NE tag.
+  warnings.warn('{} seems not to be NE tag.'.format(chunk))
+/people/dicko/miniconda3/envs/DataSR/lib/python3.12/site-packages/seqeval/metrics/sequence_labeling.py:171: UserWarning: . seems not to be NE tag.
+  warnings.warn('{} seems not to be NE tag.'.format(chunk))
+/people/dicko/miniconda3/envs/DataSR/lib/python3.12/site-packages/seqeval/metrics/sequence_labeling.py:171: UserWarning: Group seems not to be NE tag.
+  warnings.warn('{} seems not to be NE tag.'.format(chunk))
+/people/dicko/miniconda3/envs/DataSR/lib/python3.12/site-packages/seqeval/metrics/sequence_labeling.py:171: UserWarning: 1 seems not to be NE tag.
+  warnings.warn('{} seems not to be NE tag.'.format(chunk))
+/people/dicko/miniconda3/envs/DataSR/lib/python3.12/site-packages/seqeval/metrics/sequence_labeling.py:171: UserWarning: : seems not to be NE tag.
+  warnings.warn('{} seems not to be NE tag.'.format(chunk))
+/people/dicko/miniconda3/envs/DataSR/lib/python3.12/site-packages/seqeval/metrics/sequence_labeling.py:171: UserWarning: Quinacrine seems not to be NE tag.
+  warnings.warn('{} seems not to be NE tag.'.format(chunk))
+/people/dicko/miniconda3/envs/DataSR/lib/python3.12/site-packages/seqeval/metrics/sequence_labeling.py:171: UserWarning: hydrochloride seems not to be NE tag.
+  warnings.warn('{} seems not to be NE tag.'.format(chunk))
+/people/dicko/miniconda3/envs/DataSR/lib/python3.12/site-packages/seqeval/metrics/sequence_labeling.py:171: UserWarning: toxic seems not to be NE tag.
+  warnings.warn('{} seems not to be NE tag.'.format(chunk))
+/people/dicko/miniconda3/envs/DataSR/lib/python3.12/site-packages/seqeval/metrics/sequence_labeling.py:171: UserWarning: for seems not to be NE tag.
+  warnings.warn('{} seems not to be NE tag.'.format(chunk))
+/people/dicko/miniconda3/envs/DataSR/lib/python3.12/site-packages/seqeval/metrics/sequence_labeling.py:171: UserWarning: the seems not to be NE tag.
+  warnings.warn('{} seems not to be NE tag.'.format(chunk))
+/people/dicko/miniconda3/envs/DataSR/lib/python3.12/site-packages/seqeval/metrics/sequence_labeling.py:171: UserWarning: heart seems not to be NE tag.
+  warnings.warn('{} seems not to be NE tag.'.format(chunk))
+/people/dicko/miniconda3/envs/DataSR/lib/python3.12/site-packages/seqeval/metrics/sequence_labeling.py:171: UserWarning: of seems not to be NE tag.
+  warnings.warn('{} seems not to be NE tag.'.format(chunk))
+/people/dicko/miniconda3/envs/DataSR/lib/python3.12/site-packages/seqeval/metrics/sequence_labeling.py:171: UserWarning: F seems not to be NE tag.
+  warnings.warn('{} seems not to be NE tag.'.format(chunk))
+/people/dicko/miniconda3/envs/DataSR/lib/python3.12/site-packages/seqeval/metrics/sequence_labeling.py:171: UserWarning: 344 seems not to be NE tag.
+  warnings.warn('{} seems not to be NE tag.'.format(chunk))
+/people/dicko/miniconda3/envs/DataSR/lib/python3.12/site-packages/seqeval/metrics/sequence_labeling.py:171: UserWarning: rats seems not to be NE tag.
+  warnings.warn('{} seems not to be NE tag.'.format(chunk))
+/people/dicko/miniconda3/envs/DataSR/lib/python3.12/site-packages/seqeval/metrics/v1.py:57: UndefinedMetricWarning: Recall and F-score are ill-defined and being set to 0.0 in labels with no true samples. Use `zero_division` parameter to control this behavior.
+  _warn_prf(average, modifier, msg_start, len(result))
+🔍 Evaluation Report:
+              precision    recall  f1-score   support
+
+          44     0.0000    0.0000    0.0000         0
+          TP     0.0000    0.0000    0.0000         0
+           _     0.7738    0.0121    0.0238      5379
+      alcium     0.0000    0.0000    0.0000         0
+         ats     0.0000    0.0000    0.0000         0
+        eart     0.0000    0.0000    0.0000         0
+    ensitive     0.0000    0.0000    0.0000         0
+           f     0.0000    0.0000    0.0000         0
+     hannels     0.0000    0.0000    0.0000         0
+          he     0.0000    0.0000    0.0000         0
+        hile     0.0000    0.0000    0.0000         0
+        lock     0.0000    0.0000    0.0000         0
+minopyridine     0.0000    0.0000    0.0000         0
+          nd     0.0000    0.0000    0.0000         0
+        nown     0.0000    0.0000    0.0000         0
+           o     0.0000    0.0000    0.0000         0
+      oltage     0.0000    0.0000    0.0000         0
+          or     0.0000    0.0000    0.0000         0
+        oxic     0.0000    0.0000    0.0000         0
+        roup     0.0000    0.0000    0.0000         0
+           s     0.0000    0.0000    0.0000         0
+   uinacrine     0.0000    0.0000    0.0000         0
+      uinine     0.0000    0.0000    0.0000         0
+ydrochloride     0.0000    0.0000    0.0000         0
+
+   micro avg     0.5652    0.0121    0.0237      5379
+   macro avg     0.0322    0.0005    0.0010      5379
+weighted avg     0.7738    0.0121    0.0238      5379
+
+Precision: 0.5652
+Recall:    0.0121
+F1 Score:  0.0237
+Traceback (most recent call last):
+  File "/people/dicko/Extraction_Training_Drug_Chemical/LLM_As_Judges/evaluate_llm_judge.py", line 94, in <module>
+    main()
+  File "/people/dicko/Extraction_Training_Drug_Chemical/LLM_As_Judges/evaluate_llm_judge.py", line 89, in main
+    with open(args.output_preds, "w") as out_f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: 'Resutls/deepseek_with_Biobert.json'

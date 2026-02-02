@@ -1,0 +1,9 @@
+nohup: ignoring input
+Loading checkpoint shards:   0%|          | 0/2 [00:00<?, ?it/s]Loading checkpoint shards:  50%|█████     | 1/2 [00:02<00:02,  2.46s/it]Loading checkpoint shards: 100%|██████████| 2/2 [00:03<00:00,  1.49s/it]Loading checkpoint shards: 100%|██████████| 2/2 [00:03<00:00,  1.64s/it]
+/people/dicko/miniconda3/envs/DataSR/lib/python3.12/site-packages/transformers/generation/configuration_utils.py:601: UserWarning: `do_sample` is set to `False`. However, `temperature` is set to `0.6` -- this flag is only used in sample-based generation modes. You should set `do_sample=True` or unset `temperature`.
+  warnings.warn(
+/people/dicko/miniconda3/envs/DataSR/lib/python3.12/site-packages/transformers/generation/configuration_utils.py:606: UserWarning: `do_sample` is set to `False`. However, `top_p` is set to `0.9` -- this flag is only used in sample-based generation modes. You should set `do_sample=True` or unset `top_p`.
+  warnings.warn(
+Starting from v4.46, the `logits` model output will have the same type as the model (except at train time, where it will always be FP32)
+🚀 Saved metrics to llm_judge_metrics.json
+P=0.936 R=0.477 F1=0.632

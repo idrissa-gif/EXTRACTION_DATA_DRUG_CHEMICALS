@@ -1,0 +1,18 @@
+nohup: ignoring input
+You are using a model of type qwen2 to instantiate a model of type llama. This is not supported for all configurations of models and can yield errors.
+
+Loading checkpoint shards:   0%|          | 0/4 [00:00<?, ?it/s]
+Loading checkpoint shards:  25%|██▌       | 1/4 [00:16<00:48, 16.32s/it]
+Loading checkpoint shards:  50%|█████     | 2/4 [00:29<00:28, 14.34s/it]
+Loading checkpoint shards:  75%|███████▌  | 3/4 [00:40<00:12, 12.96s/it]
+Loading checkpoint shards: 100%|██████████| 4/4 [00:50<00:00, 11.74s/it]
+Loading checkpoint shards: 100%|██████████| 4/4 [00:50<00:00, 12.61s/it]
+/people/dicko/miniconda3/envs/DataSR/lib/python3.12/site-packages/transformers/generation/configuration_utils.py:601: UserWarning: `do_sample` is set to `False`. However, `temperature` is set to `0.7` -- this flag is only used in sample-based generation modes. You should set `do_sample=True` or unset `temperature`.
+  warnings.warn(
+/people/dicko/miniconda3/envs/DataSR/lib/python3.12/site-packages/transformers/generation/configuration_utils.py:606: UserWarning: `do_sample` is set to `False`. However, `top_p` is set to `0.8` -- this flag is only used in sample-based generation modes. You should set `do_sample=True` or unset `top_p`.
+  warnings.warn(
+/people/dicko/miniconda3/envs/DataSR/lib/python3.12/site-packages/transformers/generation/configuration_utils.py:623: UserWarning: `do_sample` is set to `False`. However, `top_k` is set to `20` -- this flag is only used in sample-based generation modes. You should set `do_sample=True` or unset `top_k`.
+  warnings.warn(
+Starting from v4.46, the `logits` model output will have the same type as the model (except at train time, where it will always be FP32)
+🚀 Saved metrics to Qwen.json
+P=0.945 R=0.116 F1=0.207

@@ -1,127 +1,182 @@
 #!/usr/bin/env python3
-import argparse
-from datasets import load_dataset
+import argparse, json, os, torch
+from datasets import Dataset
 from transformers import (
     AutoTokenizer,
-    LlamaForCausalLM,
+    AutoModelForCausalLM,
     Trainer,
     TrainingArguments,
     DataCollatorForLanguageModeling,
-    EarlyStoppingCallback,
+    BitsAndBytesConfig
 )
-from peft import LoraConfig, get_peft_model
-import torch
+from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
+
+def load_raw(path):
+    with open(path, "r") as f:
+        first = f.read(1)
+        f.seek(0)
+        if first == "[":
+            return json.load(f)
+        else:
+            return [json.loads(line) for line in f if line.strip()]
+
+def build_prompt(ex):
+    sent   = " ".join(ex["tokens"])
+    tags   = ex["tags"]
+    prompt = (
+        f"<start> {sent} <end>\n"
+        f"Tokens (space separated): {sent}\n"
+        f"Total tokens: {len(ex["tokens"])}\n"
+        f"Legend: B=begin, I=inside, O=outside\n"
+        f"Format: O O B I O …\n"
+        f"Tags:"
+    )
+    completion = " " + " ".join(tags) + " <end>"
+    return {"prompt": prompt, "completion": completion}
+
+class PromptDataset:
+    def __init__(self, raw, tokenizer, max_length):
+        self.tok = tokenizer
+        self.max_length = max_length
+
+        examples = [build_prompt(x) for x in raw]
+        ds = Dataset.from_list(examples)
+        self.dataset = ds.map(self._encode, remove_columns=["prompt","completion"])
+        self.dataset.set_format(type="torch", columns=["input_ids","attention_mask","labels"])
+
+    def _encode(self, ex):
+        # Combine prompt and completion for full context
+        full_text = ex["prompt"] + ex["completion"]
+
+        # Tokenize the full text
+        enc = self.tok(
+            full_text,
+            truncation=True,
+            padding="max_length",
+            max_length=self.max_length,
+            return_tensors=None  # Return lists, not tensors
+        )
+
+        # Tokenize just the prompt to find where to start predicting
+        prompt_enc = self.tok(
+            ex["prompt"],
+            truncation=True,
+            max_length=self.max_length,
+            return_tensors=None,
+            add_special_tokens=False
+        )
+
+        input_ids = enc["input_ids"]
+        labels = input_ids.copy()
+
+        # Mask the prompt portion (set to -100)
+        prompt_len = len(prompt_enc["input_ids"])
+        for i in range(prompt_len):
+            if i < len(labels):
+                labels[i] = -100
+
+        return {
+            "input_ids": input_ids,
+            "attention_mask": enc["attention_mask"],
+            "labels": labels
+        }
 
 def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--jsonl",      required=True, help="chem_judge.jsonl")
-    parser.add_argument("--base_model", default="meta-llama/Llama-2-7b-hf")
-    parser.add_argument("--out_dir",    default="judge_llama_lora")
-    parser.add_argument("--epochs",     type=int, default=3)
-    parser.add_argument("--bs",         type=int, default=4)
-    parser.add_argument("--lr",         type=float, default=2e-4)
-    parser.add_argument("--max_len",    type=int, default=128)
-    args = parser.parse_args()
+    p = argparse.ArgumentParser()
+    p.add_argument("--jsonl",      required=True)
+    p.add_argument("--base_model", default="mistralai/Mistral-7B-Instruct-v0.1")
+    p.add_argument("--out_dir",    default="bio_judge_lora")
+    p.add_argument("--epochs",     type=int,   default=3)
+    p.add_argument("--batch_size", type=int,   default=4)
+    p.add_argument("--max_len",    type=int,   default=256)
+    args = p.parse_args()
 
-    # 1) Load dataset
-    ds = load_dataset("json", data_files=args.jsonl, split="train")
+    raw = load_raw(args.jsonl)
 
-    # 2) Tokenizer & model
-    tok = AutoTokenizer.from_pretrained(args.base_model, use_fast=False)
-    if tok.pad_token is None:
-        tok.pad_token = tok.eos_token
+    # Setup tokenizer
+    tokenizer = AutoTokenizer.from_pretrained(args.base_model, use_fast=True)
+    if tokenizer.pad_token is None:
+        tokenizer.pad_token = tokenizer.eos_token
 
-    model = LlamaForCausalLM.from_pretrained(
-        args.base_model,
+    ds = PromptDataset(raw, tokenizer, args.max_len)
+
+    print(f"→ Loading {args.base_model} in 8-bit with LoRA…")
+
+    # Use BitsAndBytesConfig instead of deprecated load_in_8bit
+    bnb_config = BitsAndBytesConfig(
         load_in_8bit=True,
-        device_map="auto",
+        bnb_8bit_compute_dtype=torch.float16,
+        bnb_8bit_use_double_quant=True,
     )
-    model.config.pad_token_id = tok.eos_token_id
 
-    # 3) Apply LoRA
+    model = AutoModelForCausalLM.from_pretrained(
+        args.base_model,
+        quantization_config=bnb_config,
+        device_map="auto",
+        torch_dtype=torch.float16,
+        trust_remote_code=True
+    )
+
+    # Prepare model for k-bit training (essential for gradient computation)
+    model = prepare_model_for_kbit_training(model)
+
+    # Resize token embeddings if needed
+    if len(tokenizer) != model.get_input_embeddings().num_embeddings:
+        model.resize_token_embeddings(len(tokenizer))
+
+    # LoRA configuration with more comprehensive target modules
     lora_cfg = LoraConfig(
-        r=16,
-        lora_alpha=32,
-        target_modules=["q_proj", "v_proj"],
-        lora_dropout=0.05,
+        r=16,  # Increased rank for better performance
+        lora_alpha=32,  # Increased alpha
+        target_modules=[
+            "q_proj", "k_proj", "v_proj", "o_proj",  # All attention projections
+            "gate_proj", "up_proj", "down_proj"       # MLP projections
+        ],
+        lora_dropout=0.1,
         bias="none",
         task_type="CAUSAL_LM",
+        inference_mode=False  # Ensure training mode
     )
     model = get_peft_model(model, lora_cfg)
 
-    # 4) Tokenize & pad to max_len
-    def tokenize_fn(ex):
-        prompt, comp = ex["prompt"], ex["completion"]
-        text = prompt + " " + comp
-        t = tok(
-            text,
-            truncation=True,
-            max_length=args.max_len,
-            padding="max_length",
-        )
-        pid = tok(
-            prompt,
-            truncation=True,
-            max_length=args.max_len,
-            padding=False,
-            add_special_tokens=False,
-        )["input_ids"]
-        labels = t["input_ids"].copy()
-        labels[: len(pid)] = [-100] * len(pid)
-        t["labels"] = labels
-        return t
+    # Print trainable parameters
+    model.print_trainable_parameters()
 
-    ds = ds.map(tokenize_fn, batched=False, remove_columns=["prompt", "completion"])
+    data_collator = DataCollatorForLanguageModeling(tokenizer=tokenizer, mlm=False)
 
-    # 5) Convert to torch Tensors
-    ds.set_format(type="torch", columns=["input_ids", "attention_mask", "labels"])
-
-    # 6) Train/test split
-    split_ds = ds.train_test_split(test_size=0.2)
-    train_ds = split_ds["train"]
-    eval_ds = split_ds["test"]
-
-    # 7) Data collator
-    collator = DataCollatorForLanguageModeling(
-        tokenizer=tok,
-        mlm=False,
-        pad_to_multiple_of=8,
-    )
-
-    # 8) Training args with early stopping
     training_args = TrainingArguments(
         output_dir=args.out_dir,
-        per_device_train_batch_size=args.bs,
+        per_device_train_batch_size=args.batch_size,
+        gradient_accumulation_steps=4,  # Increased for better stability
         num_train_epochs=args.epochs,
-        learning_rate=args.lr,
-        fp16=torch.cuda.is_available(),
+        learning_rate=1e-4,  # Slightly lower learning rate
+        warmup_ratio=0.03,   # Add warmup
+        lr_scheduler_type="cosine",
+        fp16=True,
         logging_steps=50,
-        evaluation_strategy="steps",
-        eval_steps=200,
-        save_steps=200,
+        save_steps=500,
         save_total_limit=2,
         remove_unused_columns=False,
+        dataloader_drop_last=True,
         report_to=[],
-        load_best_model_at_end=True,
-        metric_for_best_model="eval_loss",
-        greater_is_better=False,
+        ddp_find_unused_parameters=False,
+        gradient_checkpointing=True,  # Enable gradient checkpointing properly
     )
 
-    # 9) Trainer with EarlyStoppingCallback
     trainer = Trainer(
         model=model,
         args=training_args,
-        train_dataset=train_ds,
-        eval_dataset=eval_ds,
-        data_collator=collator,
-        callbacks=[EarlyStoppingCallback(early_stopping_patience=5)],
+        train_dataset=ds.dataset,
+        data_collator=data_collator,
     )
 
-    # 10) Train & save
+    print("🚀 Starting training...")
     trainer.train()
-    trainer.save_model(args.out_dir)
-    tok.save_pretrained(args.out_dir)
-    print(f"✅ Saved fine-tuned model to {args.out_dir}")
+
+    # Save the LoRA adapters
+    model.save_pretrained(args.out_dir)
+    tokenizer.save_pretrained(args.out_dir)
+    print(f"✅ Fine-tuned model saved to {os.path.abspath(args.out_dir)}")
 
 if __name__ == "__main__":
     main()
