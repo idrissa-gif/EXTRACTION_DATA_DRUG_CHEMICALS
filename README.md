@@ -31,7 +31,7 @@ CUDA_VISIBLE_DEVICES=0,1,... python finetuned_biobert_args.py \
     --output_dir `OutputFolder`
 
 ### Example
-```
+
 CUDA_VISIBLE_DEVICES=0 python finetuned_biobert_args.py \
     --train_file /combined_chem_train.tsv \
     --dev_file /combined_chem_dev.tsv \
