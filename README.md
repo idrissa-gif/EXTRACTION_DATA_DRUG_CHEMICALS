@@ -1,6 +1,11 @@
 # EXTRACTION_DATA_DRUG_CHEMICALS
 ![NER Flowchart](FlowChart.png)
 
+### Hardware
+* **GPU:** NVIDIA GPU with at least 16GB VRAM (24GB+ recommended for training).
+    * *Tested on:* **2x NVIDIA RTX A6000 (48GB each)**
+* **RAM:** 32GB+ System RAM
+
 # Requirements
 Python 3.12.0
 Transformers 4.45.2
@@ -10,7 +15,7 @@ Datasets 3.4.1
 
 ### 1. NER Training Data (TSV)
 The training scripts expect data in standard **CoNLL-2003** format (token-per-line).
-* Columns: `Token` `Label` (separated by tab or space)
+* Columns: `Token` `Label`
 * Labels: `B`, `I`, `O`
 
 **Example (`train.tsv`):**
