@@ -70,3 +70,7 @@ python llm_guided_biobert.py \
     --llm_model "epfl-llm/meditron-7b"
 
 ```
+
+### **Information about the finedtuned models : ***
+The funetuned models (MLMs and LLMs) are uploaded on huggingface repository:
+- `anonymous-research-2026/BioBert`
