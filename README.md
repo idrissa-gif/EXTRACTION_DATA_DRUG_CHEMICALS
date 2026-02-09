@@ -71,6 +71,6 @@ python llm_guided_biobert.py \
 
 ```
 
-### **Information about the finedtuned models : ***
+### **Information about the finedtuned models : **
 The funetuned models (MLMs and LLMs) are uploaded on huggingface repository:
 - `anonymous-research-2026/BioBert`
