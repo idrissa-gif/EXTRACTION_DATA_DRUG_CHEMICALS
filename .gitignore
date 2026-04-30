@@ -1,0 +1,72 @@
+# IDE / editor
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pid
+
+# Logs and run output
+*.out
+*.log
+nohup.out
+
+# Archives / large datasets
+*.tar.gz
+*.zip
+
+# Ontology / large reference files (download via README instructions)
+*.obo
+desc*.xml
+
+# Pip stray installs (e.g. "=0.28.1", "=0.46.1")
+=*
+
+# Gradio / HF caches
+**/.gradio/
+.cache/
+
+# Model checkpoints and training outputs (Models/)
+Models/biobert_*/
+Models/biobert_combined_seeds/
+Models/biobert_output_tsv_100_epochs/
+Models/scifive-chemner/
+Models/scifive-chemner_tsv/
+Models/scifive-ner-output/
+Models/ner_test_output/
+Models/test_*_train_*/
+Models/bc4chemd/
+Models/bc5cdr/
+Models/biored/
+Models/combined/
+
+# Annotation/normalization runtime artefacts
+fairClinical_annotation/mistral-chem-instruct-lora/
+fairClinical_annotation/instruct_data/
+fairClinical_annotation/PMC*_results*/
+fairClinical_annotation/results_*.json*
+fairClinical_normalization/D2_3/
+fairClinical_normalization/PMC*_json_ascii/
+fairClinical_normalization/PMC*_json_ascii_annotated_json/
+fairClinical_normalization/normalization_cache.json
+fairClinical_normalization/parsed_results.csv
+fairClinical_normalization/train_mistral_*.jsonl
+fairClinical_normalization/test_set_with_text.json
+fairClinical_normalization/Database2025_data.csv
+fairClinical_normalization/cleaned_target_entities.csv
+fairClinical_normalization/ATC.csv
+fairClinical_normalization/pmc_CR_title_set.tsv
+
+# Top-level data dumps (large; not part of the code release)
+input/
+pubchem.jsonl
+
+# External clones
+Compact-Biomedical-Transformers/
+
+# Internal docs
+*.docx
