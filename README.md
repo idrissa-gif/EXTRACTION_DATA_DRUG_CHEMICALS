@@ -23,7 +23,8 @@ The framework implements a robust two-stage Chemical Named Entity Recognition (N
 Install dependencies via pip:
 
 ```bash
-pip install torch transformers datasets pandas scikit-learn seqeval tqdm
+pip install torch transformers datasets pandas scikit-learn seqeval tqdm requests
+```
 
 ## Data Format
 
@@ -40,19 +41,23 @@ used      O
 for       O
 pain      O
 .         O
+```
 
-For the reproducibility of this code run this code.
+For the reproducibility of this code, run the commands below.
 
-# **Supervised Fine-tuning:**
+# Supervised Fine-tuning
 
+```bash
 CUDA_VISIBLE_DEVICES=0,1,... python finetuned_biobert_args.py \
-    --train_file `TrainPath` \
-    --dev_file `DevPath` \
-    --test_file `TestPath` \
-    --output_dir `OutputFolder`
+    --train_file TrainPath \
+    --dev_file DevPath \
+    --test_file TestPath \
+    --output_dir OutputFolder
+```
 
 ### Example
 
+```bash
 CUDA_VISIBLE_DEVICES=0 python finetuned_biobert_args.py \
     --train_file /combined_chem_train.tsv \
     --dev_file /combined_chem_dev.tsv \
@@ -60,17 +65,76 @@ CUDA_VISIBLE_DEVICES=0 python finetuned_biobert_args.py \
     --output_dir biobert_biored
 ```
 
-### **Generative Tagging with Guidance:**
-```
+# Generative Tagging with Guidance
+
+```bash
 python llm_guided_biobert.py \
     --train_file "path/to/train.tsv" \
     --dev_file "path/to/dev.tsv" \
     --test_file "path/to/test.tsv" \
     --output_dir "./output_model" \
     --llm_model "epfl-llm/meditron-7b"
-
 ```
 
-### ***Information about the finedtuned models : ***
-The funetuned models (MLMs and LLMs) are uploaded on huggingface repository:
+# Annotation (BioC JSON corpora)
+
+Once the model is trained, you can annotate raw BioC JSON files (e.g. the FAIRClinical PMC dumps) with BIO tags.
+
+### Annotate with the fine-tuned BioBERT
+
+```bash
+python fairClinical_annotation/Extraction_BIO.py \
+    --model_path path/to/biobert_finetuned \
+    --json_dir input/PMC000XXXXX_json_ascii
+```
+
+This writes one `*_annotated.tsv` file per document into `<json_dir>_results/`.
+
+### Annotate with an instruction-tuned LLM guided by BioBERT priors
+
+```bash
+python fairClinical_annotation/Extraction_BIO_LLMS.py \
+    --model_path mistralai/Mistral-7B-Instruct-v0.2 \
+    --json_dir input/PMC000XXXXX_json_ascii \
+    --biobert_priors_dir input/PMC000XXXXX_json_ascii_results \
+    --biobert_help_mode both \
+    --biobert_threshold 0.85
+```
+
+`--biobert_help_mode` accepts `both`, `prompt`, `constrain`, or `off`, depending on whether the BioBERT priors should guide the prompt, post-hoc constraints, both, or neither.
+
+# Normalization (linking entities to ChEBI / ATC)
+
+After annotation, each surface form is linked to a concept ID via the EBI OLS API (ChEBI first, ATC as a fallback). Results are cached on disk so reruns are cheap.
+
+```bash
+python fairClinical_normalization/normalize_to_json.py \
+    --input_root input \
+    --cache_path fairClinical_normalization/normalization_cache.json
+```
+
+Output is written to `input/PMC*_json_ascii_annotated_json/<docid>.json`. Each passage gains an `annotations` list of the form:
+
+```json
+{
+  "id": "A1",
+  "infons": {"type": "Chemical", "identifier": "CHEBI:12345"},
+  "text": "aspirin",
+  "locations": [{"offset": 42, "length": 7}]
+}
+```
+
+Pass `--overwrite` to re-normalize files that already have output, and `--json_dirs` to restrict the run to specific subdirectories.
+
+If you want to run annotation and normalization in a single pass (useful for ad-hoc experiments), use:
+
+```bash
+python fairClinical_normalization/Extraction_BIO_Annotation.py \
+    --model_path path/to/biobert_finetuned \
+    --json_dir input/PMC000XXXXX_json_ascii
+```
+
+# Fine-tuned models
+
+The fine-tuned models (MLMs and LLMs) are uploaded to the HuggingFace repository:
 - `anonymous-research-2026/BioBert`
