@@ -74,37 +74,37 @@
 
   <!-- Fine-tuning -->
   <div class="card">
-    <h3><span class="tag train">Fine-tuning</span> Training prompt example</h3>
-    <p class="desc">Used to construct prompt&ndash;completion pairs during fine-tuning. The completion is the target BIO tag sequence.</p>
+    <h3><span class="tag train">Fine-tuning</span> Training prompt &amp; target</h3>
+    <p class="desc">Prompt&ndash;completion pair used during fine-tuning. The prompt ends at <code class="inline">Tags:</code>; the highlighted completion is the target BIO sequence, and the loss is the autoregressive objective over the sequence.</p>
 <pre>&lt;start&gt; Aspirin is used to reduce fever &lt;end&gt;
-Tokens: Aspirin is used to reduce fever
-<span class="hl">BioBERT suggests: B O O O O O</span>
+Tokens (space separated): Aspirin is used to reduce fever
 Total tokens: 6
-Output exactly 6 BIO tags, space-separated, no other text:
-Tags:</pre>
+Legend: B=begin, I=inside, O=outside
+Format: O O B I O &hellip;
+Tags:<span class="hl"> B O O O O O &lt;end&gt;</span></pre>
   </div>
 
   <!-- Evaluation with guidance -->
   <div class="card">
     <h3><span class="tag guide">Evaluation &middot; Guided</span> With BioBERT guidance</h3>
-    <p class="desc">Inference-time prompt where BioBERT predictions are injected as weak supervision to anchor entity boundaries.</p>
+    <p class="desc">Inference-time prompt where BioBERT predictions are injected as weak supervision to anchor entity boundaries. Note the different instruction style from training (<code class="inline">Output EXACTLY N tags</code> rather than the <code class="inline">Legend/Format</code> lines).</p>
 <pre>&lt;start&gt; Aspirin is used to reduce fever &lt;end&gt;
 Tokens: Aspirin is used to reduce fever
 <span class="hl">BioBERT suggests: B O O O O O</span>
 Total tokens: 6
-Output exactly 6 BIO tags, space-separated, no other text:
+Output EXACTLY 6 tags, space-separated, using only B I O. No explanations.
 Tags:</pre>
   </div>
 
   <!-- Zero-shot -->
   <div class="card">
     <h3><span class="tag zero">Evaluation &middot; Zero-shot</span> Without BioBERT</h3>
-    <p class="desc">Zero-shot inference prompt. Only the raw sentence and the task instruction are provided &mdash; no guidance line.</p>
+    <p class="desc">Zero-shot inference prompt &mdash; identical to the guided prompt but with the <code class="inline">BioBERT suggests</code> line omitted.</p>
 <pre>&lt;start&gt; Aspirin is used to reduce fever &lt;end&gt;
 Tokens: Aspirin is used to reduce fever
-<span class="mut">(no BioBERT guidance line)</span>
+<span class="mut">(no BioBERT suggests line)</span>
 Total tokens: 6
-Output exactly 6 BIO tags, space-separated, no other text:
+Output EXACTLY 6 tags, space-separated, using only B I O. No explanations.
 Tags:</pre>
   </div>
 
