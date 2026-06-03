@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Appendix &middot; Prompt Templates &mdash; Chemical NER</title>
+<style>
+  :root{
+    --bg:#f7f8fa; --card:#ffffff; --ink:#1c2430; --muted:#5b6675;
+    --accent:#1f6feb; --line:#e3e7ee; --code-bg:#0d1117; --code-ink:#9ecbff;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font:16px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  .wrap{max-width:880px; margin:0 auto; padding:48px 20px 80px}
+  header.site{border-bottom:1px solid var(--line); padding-bottom:24px; margin-bottom:36px}
+  .eyebrow{color:var(--accent); font-weight:600; letter-spacing:.04em; text-transform:uppercase; font-size:13px; margin:0 0 8px}
+  h1{font-size:30px; line-height:1.25; margin:0 0 10px}
+  .authors{color:var(--muted); margin:0 0 4px}
+  .affil{color:var(--muted); font-size:14px; margin:0}
+  h2{font-size:22px; margin:40px 0 6px}
+  .lead{color:var(--muted); margin:0 0 28px}
+  h3{font-size:16px; margin:0; display:flex; align-items:center; gap:10px}
+  .tag{
+    font:600 11px/1 -apple-system,sans-serif; letter-spacing:.03em; text-transform:uppercase;
+    padding:5px 9px; border-radius:999px; color:#fff; white-space:nowrap;
+  }
+  .tag.train{background:#1f6feb}
+  .tag.guide{background:#0a8754}
+  .tag.zero{background:#9a6b00}
+  .card{
+    background:var(--card); border:1px solid var(--line); border-radius:14px;
+    padding:20px 22px; margin:18px 0; box-shadow:0 1px 2px rgba(16,24,40,.04);
+  }
+  .card p.desc{color:var(--muted); font-size:14px; margin:8px 0 14px}
+  pre{
+    margin:0; background:var(--code-bg); color:#e6edf3; border-radius:10px;
+    padding:18px 18px; overflow-x:auto;
+    font:13.5px/1.7 "SFMono-Regular",ui-monospace,Menlo,Consolas,monospace;
+  }
+  pre .hl{color:var(--code-ink); font-weight:600}
+  pre .mut{color:#6e7681}
+  figure{margin:30px 0 0; text-align:center}
+  figure img{max-width:100%; border:1px solid var(--line); border-radius:12px; background:#fff}
+  figcaption{color:var(--muted); font-size:14px; margin-top:10px}
+  .note{
+    background:#fff7e6; border:1px solid #ffe1a8; color:#7a5800;
+    border-radius:10px; padding:12px 14px; font-size:13.5px; margin:14px 0 0;
+  }
+  footer.site{margin-top:48px; padding-top:22px; border-top:1px solid var(--line); color:var(--muted); font-size:14px}
+  a{color:var(--accent); text-decoration:none}
+  a:hover{text-decoration:underline}
+  code.inline{background:#eef1f6; padding:1px 6px; border-radius:6px; font-size:13px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="site">
+    <p class="eyebrow">Supplementary Appendix</p>
+    <h1>Synergizing Domain-Specific Masked Language Models and Instruction-Tuned LLMs for Chemical NER</h1>
+    <p class="authors">Idrissa Dicko &middot; Nona Naderi</p>
+    <p class="affil">Universit&eacute; Paris-Saclay, CNRS, Laboratoire Interdisciplinaire des Sciences du Num&eacute;rique, 91400, Orsay, France</p>
+  </header>
+
+  <h2>Prompt Templates for LLM Training and Evaluation</h2>
+  <p class="lead">
+    During fine-tuning and inference, the instruction-tuned LLMs were guided by structured prompts.
+    The templates below show the exact input format used in each setting. Tokens are presented
+    space-separated, and the model is asked to emit one BIO tag per token.
+  </p>
+
+  <!-- Fine-tuning -->
+  <div class="card">
+    <h3><span class="tag train">Fine-tuning</span> Training prompt example</h3>
+    <p class="desc">Used to construct prompt&ndash;completion pairs during fine-tuning. The completion is the target BIO tag sequence.</p>
+<pre>&lt;start&gt; Aspirin is used to reduce fever &lt;end&gt;
+Tokens: Aspirin is used to reduce fever
+<span class="hl">BioBERT suggests: B O O O O O</span>
+Total tokens: 6
+Output exactly 6 BIO tags, space-separated, no other text:
+Tags:</pre>
+  </div>
+
+  <!-- Evaluation with guidance -->
+  <div class="card">
+    <h3><span class="tag guide">Evaluation &middot; Guided</span> With BioBERT guidance</h3>
+    <p class="desc">Inference-time prompt where BioBERT predictions are injected as weak supervision to anchor entity boundaries.</p>
+<pre>&lt;start&gt; Aspirin is used to reduce fever &lt;end&gt;
+Tokens: Aspirin is used to reduce fever
+<span class="hl">BioBERT suggests: B O O O O O</span>
+Total tokens: 6
+Output exactly 6 BIO tags, space-separated, no other text:
+Tags:</pre>
+  </div>
+
+  <!-- Zero-shot -->
+  <div class="card">
+    <h3><span class="tag zero">Evaluation &middot; Zero-shot</span> Without BioBERT</h3>
+    <p class="desc">Zero-shot inference prompt. Only the raw sentence and the task instruction are provided &mdash; no guidance line.</p>
+<pre>&lt;start&gt; Aspirin is used to reduce fever &lt;end&gt;
+Tokens: Aspirin is used to reduce fever
+<span class="mut">(no BioBERT guidance line)</span>
+Total tokens: 6
+Output exactly 6 BIO tags, space-separated, no other text:
+Tags:</pre>
+  </div>
+
+  <h2>Error Analysis</h2>
+  <figure>
+    <img src="analysing_the_results.png" alt="Top 20 misclassified chemical entities">
+    <figcaption>Figure&nbsp;1. Top 20 misclassified entities.</figcaption>
+  </figure>
+  <footer class="site">
+    Code, models, and predictions:
+    <a href="https://github.com/idrissa-gif/EXTRACTION_DATA_DRUG_CHEMICALS.git">github.com/idrissa-gif/EXTRACTION_DATA_DRUG_CHEMICALS</a>
+    &middot; Models on
+    <a href="https://huggingface.co/Idrissa242/">Hugging Face</a>
+  </footer>
+
+</div>
+</body>
+</html>
