@@ -3,14 +3,24 @@ import json
 import argparse
 import time
 import psutil
-import re
-import requests
 from pathlib import Path
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 os.environ['USE_TORCH'] = '1'
 
 from transformers import AutoTokenizer, AutoModelForTokenClassification, pipeline
+
+from normalize_to_json import (
+    DEFAULT_CHEM_ONTOLOGIES,
+    DEFAULT_DRUG_ONTOLOGIES,
+    INFON_FIELD,
+    RESOLVERS,
+    _parse_ontology_list,
+    load_cache,
+    lookup_term,
+    primary_identifier,
+    save_cache,
+)
 
 try:
     from pynvml import (
@@ -24,63 +34,26 @@ except ImportError:
     GPU_AVAILABLE = False
 
 
-# --- API CACHE & FUNCTIONS ---
-ID_CACHE = {}
-
-def clean_term(term):
-    """Removes HTML tags and normalizes whitespace for API queries."""
-    clean = re.sub(r'<[^>]+>', '', term)
-    return " ".join(clean.split())
-
-def query_ols_api(term, ontology):
-    """Queries the EBI OLS API for a specific ontology (e.g., 'chebi' or 'atc')."""
-    url = "https://www.ebi.ac.uk/ols/api/search"
-    params = {
-        'q': term,
-        'ontology': ontology,
-        'exact': False,
-        'rows': 1
-    }
-    try:
-        response = requests.get(url, params=params, timeout=5)
-        if response.status_code == 200:
-            docs = response.json().get('response', {}).get('docs', [])
-            if docs:
-                raw_id = docs[0].get('short_form', '')
-                return raw_id.replace("_", ":")
-    except Exception:
-        pass
-    return None
-
-def get_concept_id(term):
-    """Tries to find a ChEBI ID. If it fails, falls back to ATC."""
-    term_clean = clean_term(term.lower().strip())
-
-    if term_clean in ID_CACHE:
-        return ID_CACHE[term_clean]
-
-    # 1. Try ChEBI
-    chebi_id = query_ols_api(term_clean, "chebi")
-    if chebi_id:
-        ID_CACHE[term_clean] = chebi_id
-        return chebi_id
-
-    # 2. Try ATC
-    atc_id = query_ols_api(term_clean, "atc")
-    if atc_id:
-        ID_CACHE[term_clean] = atc_id
-        return atc_id
-
-    # Not found
-    ID_CACHE[term_clean] = "NOT_FOUND"
-    return "NOT_FOUND"
+# Map tag suffix -> entity type. Bare B/I (no suffix) defaults to Chemical
+# for backward compatibility with the chem-only model.
+_TYPE_FROM_SUFFIX = {"chem": "Chemical", "drug": "Drug", "": "Chemical"}
 
 
-# --- NER EXTRACTION & STITCHING ---
+def _entity_type_from_tag(tag: str):
+    """Return ('B'|'I'|'O', 'Chemical'|'Drug'|None) for a model tag."""
+    if not tag or tag == "O":
+        return ("O", None)
+    head, _, suffix = tag.partition("-")
+    if head not in ("B", "I"):
+        return ("O", None)
+    return (head, _TYPE_FROM_SUFFIX.get(suffix.lower()))
+
+
 def extract_entities_from_pipeline(ner_results, text):
     """
-    Stitches subwords (e.g., 'ch', '##lor') and multi-word entities
-    back together into full entity strings using character offsets.
+    Stitches subwords and multi-word entities back into full entity strings,
+    and tags each entity with its type ('Chemical' or 'Drug') based on the
+    model's BIO label suffix.
     """
     entities = []
     current_ent = None
@@ -88,62 +61,65 @@ def extract_entities_from_pipeline(ner_results, text):
     for res in ner_results:
         tag = res.get('entity', res.get('entity_group', 'O'))
         token_text = res.get('word', '')
+        head, ent_type = _entity_type_from_tag(tag)
 
-        # Check if this is a subword token (BERT-style ## prefix or other indicators)
         is_subword = token_text.startswith('##') or (
             current_ent and res['start'] == current_ent['end']
         )
 
-        # Skip non-entities
-        if tag == 'O':
+        if head == "O":
             if current_ent:
                 entities.append(current_ent)
                 current_ent = None
             continue
 
-        # Condition 1: Subwords (tokens touch each other exactly without spaces)
         is_contiguous = current_ent and (res['start'] == current_ent['end'])
-
-        # Condition 2: Multi-word entities marked with 'I' (Inside) tag
-        is_i_tag = current_ent and (tag.startswith('I') or tag == 'I')
-
-        # Condition 3: Force subword tokens to merge with previous entity
-        # This handles cases where ## tokens incorrectly get B- tags
+        is_i_tag = current_ent and head == "I"
         should_merge = is_contiguous or is_i_tag or (is_subword and current_ent)
 
         if should_merge:
-            # Extend the current entity's boundary
             current_ent['end'] = res['end']
             current_ent['text'] = text[current_ent['start']:res['end']]
         elif is_subword and not current_ent:
-            # Orphan subword with no preceding entity - skip it entirely
-            # This catches fragments like "##ine" that shouldn't be entities
             continue
         else:
-            # Finalize previous entity and start a new one
             if current_ent:
                 entities.append(current_ent)
             current_ent = {
                 'start': res['start'],
                 'end': res['end'],
-                'text': text[res['start']:res['end']]
+                'text': text[res['start']:res['end']],
+                'type': ent_type or "Chemical",
             }
 
-    # Catch the last entity in the sequence
     if current_ent:
         entities.append(current_ent)
 
-    # Post-filter: remove suspiciously short entities (likely subword fragments)
     MIN_ENTITY_LENGTH = 3
-    entities = [e for e in entities if len(e['text']) >= MIN_ENTITY_LENGTH]
-
-    return entities
+    return [e for e in entities if len(e['text']) >= MIN_ENTITY_LENGTH]
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Run BIO-tag NER on BioC JSON files and append annotations.")
-    parser.add_argument("--model_path", type=str, required=True, help="Path to the fine-tuned model")
-    parser.add_argument("--json_dir", type=str, required=True, help="Directory with BioC Json files.")
+    parser = argparse.ArgumentParser(
+        description="Run BIO-tag NER on BioC JSON files and append "
+                    "ontology-linked annotations in a single pass."
+    )
+    parser.add_argument("--model_path", required=True,
+                        help="Path to the fine-tuned model")
+    parser.add_argument("--json_dir", required=True,
+                        help="Directory with BioC JSON files.")
+    parser.add_argument("--cache_path", default="./normalization_cache.json",
+                        help="On-disk cache of (term, ontology) -> concept_id lookups.")
+    parser.add_argument("--chem_ontologies",
+                        default=",".join(DEFAULT_CHEM_ONTOLOGIES),
+                        help=("Ordered, comma-separated ontology keys for "
+                              "Chemical entities. Supported: "
+                              + ",".join(sorted(RESOLVERS))))
+    parser.add_argument("--drug_ontologies",
+                        default=",".join(DEFAULT_DRUG_ONTOLOGIES),
+                        help=("Ordered, comma-separated ontology keys for "
+                              "Drug entities. Supported: "
+                              + ",".join(sorted(RESOLVERS))))
     return parser.parse_args()
 
 
@@ -159,6 +135,15 @@ def get_gpu_memory():
 
 def main():
     args = parse_args()
+    chem_ontologies = _parse_ontology_list(args.chem_ontologies, DEFAULT_CHEM_ONTOLOGIES)
+    drug_ontologies = _parse_ontology_list(args.drug_ontologies, DEFAULT_DRUG_ONTOLOGIES)
+    print(f"Chemical ontology priority: {chem_ontologies}")
+    print(f"Drug ontology priority    : {drug_ontologies}")
+
+    cache_path = Path(args.cache_path)
+    cache = load_cache(cache_path)
+    print(f"Loaded {len(cache)} cached terms from {cache_path}")
+
     process = psutil.Process(os.getpid())
 
     json_dir = Path(args.json_dir)
@@ -167,97 +152,99 @@ def main():
 
     log_path = result_dir / "usage_log.txt"
 
-    with open(log_path, "w") as log:
-        log.write("============================ Resource Usage Log ============================\n")
+    files_processed = 0
+    try:
+        with open(log_path, "w") as log:
+            log.write("============================ Resource Usage Log ============================\n")
 
-        t0 = time.time()
-        import torch
+            t0 = time.time()
+            import torch
 
-        # Check if CUDA is available and set device
-        device = 0 if torch.cuda.is_available() else -1
+            device = 0 if torch.cuda.is_available() else -1
 
-        tokenizer = AutoTokenizer.from_pretrained(args.model_path)
-        model = AutoModelForTokenClassification.from_pretrained(args.model_path)
+            tokenizer = AutoTokenizer.from_pretrained(args.model_path)
+            model = AutoModelForTokenClassification.from_pretrained(args.model_path)
 
-        # Initialize pipeline
-        ner = pipeline("ner", model=model, tokenizer=tokenizer, aggregation_strategy="none", device=device)
+            ner = pipeline("ner", model=model, tokenizer=tokenizer,
+                           aggregation_strategy="none", device=device)
 
-        print(f"Using device: {'GPU' if device == 0 else 'CPU'}")
-        model_load_time = time.time() - t0
+            print(f"Using device: {'GPU' if device == 0 else 'CPU'}")
+            model_load_time = time.time() - t0
 
-        mem_used = process.memory_info().rss / 1024 ** 2
-        gpu_used = get_gpu_memory()
+            mem_used = process.memory_info().rss / 1024 ** 2
+            gpu_used = get_gpu_memory()
 
-        log.write(f"Model load time: {model_load_time:.2f} s\n")
-        log.write(f"Memory after model load: {mem_used:.2f} MB\n")
-        if gpu_used is not None:
-            log.write(f"GPU memory after model load: {gpu_used:.2f} MB\n")
+            log.write(f"Model load time: {model_load_time:.2f} s\n")
+            log.write(f"Memory after model load: {mem_used:.2f} MB\n")
+            if gpu_used is not None:
+                log.write(f"GPU memory after model load: {gpu_used:.2f} MB\n")
 
-        for json_file in json_dir.glob("*.json"):
-            file_start = time.time()
+            for json_file in json_dir.glob("*.json"):
+                file_start = time.time()
 
-            # 1. Load the original BioC JSON
-            with open(json_file, 'r', encoding="utf-8") as f:
-                bioc = json.load(f)
+                with open(json_file, 'r', encoding="utf-8") as f:
+                    bioc = json.load(f)
 
-            # 2. Iterate through documents and passages
-            for doc in bioc.get('documents', []):
-                for passage in doc.get('passages', []):
-                    passage_text = passage.get("text", "")
-                    if not passage_text:
-                        continue
+                for doc in bioc.get('documents', []):
+                    for passage in doc.get('passages', []):
+                        passage_text = passage.get("text", "")
+                        if not passage_text:
+                            continue
 
-                    # Ensure annotations list exists
-                    if "annotations" not in passage:
-                        passage["annotations"] = []
+                        if "annotations" not in passage:
+                            passage["annotations"] = []
 
-                    passage_offset = passage.get("offset", 0)
-                    ann_id_counter = len(passage["annotations"]) + 1
+                        passage_offset = passage.get("offset", 0)
+                        ann_id_counter = len(passage["annotations"]) + 1
 
-                    # Run NER and get raw token results
-                    ner_results = ner(passage_text)
+                        ner_results = ner(passage_text)
+                        entities = extract_entities_from_pipeline(ner_results, passage_text)
 
-                    # Stitch subwords and multi-words into full entities
-                    entities = extract_entities_from_pipeline(ner_results, passage_text)
+                        for ent in entities:
+                            ontologies = (drug_ontologies if ent["type"] == "Drug"
+                                          else chem_ontologies)
+                            hits = lookup_term(ent['text'], ontologies, cache)
+                            infons = {
+                                "type": ent["type"],
+                                "identifier": primary_identifier(hits, ontologies),
+                            }
+                            for ont, cid in hits.items():
+                                if cid:
+                                    infons[INFON_FIELD[ont]] = cid
 
-                    # 3. Look up IDs and append to the passage's annotations
-                    for ent in entities:
-                        concept_id = get_concept_id(ent['text'])
-
-                        annotation = {
-                            "id": f"A{ann_id_counter}",
-                            "infons": {
-                                "type": "Chemical",
-                                "identifier": concept_id
-                            },
-                            "text": ent['text'],
-                            "locations": [
-                                {
+                            passage["annotations"].append({
+                                "id": f"A{ann_id_counter}",
+                                "infons": infons,
+                                "text": ent['text'],
+                                "locations": [{
                                     "offset": passage_offset + ent['start'],
-                                    "length": ent['end'] - ent['start']
-                                }
-                            ]
-                        }
-                        passage["annotations"].append(annotation)
-                        ann_id_counter += 1
-                        time.sleep(0.05) # Polite API delay
+                                    "length": ent['end'] - ent['start'],
+                                }],
+                            })
+                            ann_id_counter += 1
 
-            # 4. Save the modified BioC structure to a new JSON file
-            output_file = result_dir / f"{json_file.name}"
-            with open(output_file, "w", encoding="utf-8") as f:
-                json.dump(bioc, f, indent=2, ensure_ascii=False)
+                output_file = result_dir / f"{json_file.name}"
+                with open(output_file, "w", encoding="utf-8") as f:
+                    json.dump(bioc, f, indent=2, ensure_ascii=False)
 
-            file_time = time.time() - file_start
-            file_mem = process.memory_info().rss / 1024**2
-            file_gpu = get_gpu_memory()
+                files_processed += 1
+                if files_processed % 20 == 0:
+                    save_cache(cache_path, cache)
 
-            log.write(f"\nFile: {json_file.name}\n")
-            log.write(f"Time: {file_time:.2f} s\n")
-            log.write(f"Memory: {file_mem:.2f} MB\n")
-            if file_gpu is not None:
-                log.write(f"GPU memory: {file_gpu:.2f} MB\n")
+                file_time = time.time() - file_start
+                file_mem = process.memory_info().rss / 1024**2
+                file_gpu = get_gpu_memory()
 
-            print(f"Annotated {json_file.name} -> {output_file.name}")
+                log.write(f"\nFile: {json_file.name}\n")
+                log.write(f"Time: {file_time:.2f} s\n")
+                log.write(f"Memory: {file_mem:.2f} MB\n")
+                if file_gpu is not None:
+                    log.write(f"GPU memory: {file_gpu:.2f} MB\n")
+
+                print(f"Annotated {json_file.name} -> {output_file.name}")
+    finally:
+        save_cache(cache_path, cache)
+
 
 if __name__ == "__main__":
     main()

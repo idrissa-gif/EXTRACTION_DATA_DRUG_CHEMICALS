@@ -54,7 +54,17 @@ CUDA_VISIBLE_DEVICES=0,1,... python finetuned_biobert_args.py \
     --test_file TestPath \
     --output_dir OutputFolder
 ```
-
+For train for the chemical and drug NER
+```
+ CUDA_VISIBLE_DEVICES=0 python finetuned_biobert_chemdrug.py \
+    --chem_train ../chemdrug_chem_train.tsv \
+    --chem_dev   ../chemdrug_chem_dev.tsv \
+    --chem_test  ../chemdrug_chem_test.tsv \
+    --drug_train ../chemdrug_drug_train.tsv \
+    --drug_dev   ../chemdrug_drug_dev.tsv \
+    --drug_test  ../chemdrug_drug_test.tsv \
+    --output_dir biobert_chemdrug  
+```
 ### Example
 
 ```bash
@@ -103,24 +113,49 @@ python fairClinical_annotation/Extraction_BIO_LLMS.py \
 
 `--biobert_help_mode` accepts `both`, `prompt`, `constrain`, or `off`, depending on whether the BioBERT priors should guide the prompt, post-hoc constraints, both, or neither.
 
-# Normalization (linking entities to ChEBI / ATC)
+# Normalization (linking entities to ontology IDs)
 
-After annotation, each surface form is linked to a concept ID via the EBI OLS API (ChEBI first, ATC as a fallback). Results are cached on disk so reruns are cheap.
+After annotation, each surface form is linked to one or more ontology concept IDs. The script handles both **Chemical** and **Drug** entities (BIO tags `B-Chem`/`I-Chem` and `B-Drug`/`I-Drug`); legacy chem-only `B`/`I` tags are still treated as Chemical for back-compat.
+
+The ontology priority is configurable per entity type. Supported back-ends:
+
+| Key        | Source                                        | ID prefix    |
+|------------|-----------------------------------------------|--------------|
+| `chebi`    | EBI OLS, `ontology=chebi`                     | `CHEBI:`     |
+| `atc`      | EBI OLS, `ontology=atc`                       | `ATC:`       |
+| `mesh`     | EBI OLS, `ontology=mesh`                      | `MESH:`      |
+| `drugbank` | EBI OLS, `ontology=drugbank`                  | `DRUGBANK:`  |
+| `pubchem`  | PubChem PUG REST (compound name)              | `CID:`       |
+| `rxnorm`   | NLM RxNav (`rxcui` exact-name lookup)         | `RXCUI:`     |
+
+The script walks the configured ontology list in order. The **first** hit becomes the canonical `infons.identifier`; **every** hit is also recorded in a per-ontology infon field (`chebi_id`, `atc_id`, `mesh_id`, `drugbank_id`, `pubchem_id`, `rxnorm_id`) so downstream consumers can join on any vocabulary.
+
+Lookups are cached on disk. Pre-existing caches in the legacy `{concept_id, ontology}` shape are migrated to the new per-ontology shape automatically on first load (no re-querying of already-resolved chemical terms).
 
 ```bash
 python fairClinical_normalization/normalize_to_json.py \
     --input_root input \
-    --cache_path fairClinical_normalization/normalization_cache.json
+    --cache_path fairClinical_normalization/normalization_cache.json \
+    --chem_ontologies chebi,atc,mesh,pubchem \
+    --drug_ontologies atc,rxnorm,drugbank,mesh,chebi
 ```
+
+Defaults: `--chem_ontologies chebi,atc` and `--drug_ontologies atc,chebi` (mirrors the original behavior for chemicals while extending coverage to drugs).
 
 Output is written to `input/PMC*_json_ascii_annotated_json/<docid>.json`. Each passage gains an `annotations` list of the form:
 
 ```json
 {
   "id": "A1",
-  "infons": {"type": "Chemical", "identifier": "CHEBI:12345"},
-  "text": "aspirin",
-  "locations": [{"offset": 42, "length": 7}]
+  "infons": {
+    "type": "Drug",
+    "identifier": "ATC:N02BE01",
+    "atc_id": "ATC:N02BE01",
+    "rxnorm_id": "RXCUI:161",
+    "chebi_id": "CHEBI:46195"
+  },
+  "text": "paracetamol",
+  "locations": [{"offset": 42, "length": 11}]
 }
 ```
 
@@ -130,9 +165,13 @@ If you want to run annotation and normalization in a single pass (useful for ad-
 
 ```bash
 python fairClinical_normalization/Extraction_BIO_Annotation.py \
-    --model_path path/to/biobert_finetuned \
-    --json_dir input/PMC000XXXXX_json_ascii
+    --model_path path/to/biobert_chemdrug \
+    --json_dir input/PMC000XXXXX_json_ascii \
+    --chem_ontologies chebi,atc,mesh,pubchem \
+    --drug_ontologies atc,rxnorm,drugbank,mesh,chebi
 ```
+
+This shares the same resolver registry, ontology-priority logic, and on-disk cache as `normalize_to_json.py`.
 
 # Fine-tuned models
 

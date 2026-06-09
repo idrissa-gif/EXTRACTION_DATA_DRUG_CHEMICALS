@@ -102,7 +102,7 @@ def main():
     process = psutil.Process(os.getpid())
 
     json_dir = Path(args.json_dir)
-    result_dir = json_dir.parent / f"{args.json_dir}_results"
+    result_dir = json_dir.parent / f"{json_dir.name}_results"
     result_dir.mkdir(parents=True, exist_ok=True)
 
     log_path = result_dir / "usage_log.txt"
@@ -132,6 +132,10 @@ def main():
             log.write(f"GPU memory after model load: {gpu_used:.2f} MB\n")
 
         for json_file in json_dir.glob("*.json"):
+            output_file = result_dir / f"{json_file.stem}_annotated.tsv"
+            if output_file.exists():
+                continue
+
             file_start = time.time()
 
             with open(json_file, 'r', encoding="utf-8") as f:
@@ -146,7 +150,6 @@ def main():
                         tsv_lines.append(f"{token}\t{tag}")
                     tsv_lines.append("")  # Empty line between passages
 
-            output_file = result_dir / f"{json_file.stem}_annotated.tsv"
             with open(output_file, "w", encoding="utf-8") as f:
                 f.write("\n".join(tsv_lines))
 
