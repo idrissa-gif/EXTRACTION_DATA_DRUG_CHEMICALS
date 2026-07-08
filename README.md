@@ -1,6 +1,5 @@
 # Synergizing Domain-Specific Masked Language Models and Instruction-Tuned LLMs for Chemical NER
-
-<img width="348" height="190" alt="image" src="https://github.com/user-attachments/assets/205db43f-2ea8-4bf1-a188-a100f7e35615" />
+![Methodology Flowchart]( <img width="auto" height="auto" alt="image" src="https://github.com/user-attachments/assets/205db43f-2ea8-4bf1-a188-a100f7e35615" />)
 
 This repository contains the official implementation of the paper **"Synergizing Domain-Specific Masked Language Models and Instruction-Tuned LLMs for Chemical NER"**, submitted to LREC 2026.
 
