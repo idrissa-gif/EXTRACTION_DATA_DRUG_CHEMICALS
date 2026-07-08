@@ -177,3 +177,11 @@ This shares the same resolver registry, ontology-priority logic, and on-disk cac
 
 The fine-tuned models (MLMs and LLMs) are uploaded to the HuggingFace repository:
 - `anonymous-research-2026/BioBert`
+
+# Related publication
+
+- Dicko I., Naderi N., *Synergizing Domain-Specific Masked Language Models, Instruction-Tuned LLMs for Chemical NER*. Atelier IA et santé, Plate-Forme Intelligence Artificielle 2026. Association Française pour l'Intelligence Artificielle, France. *(Submitted to HAL — not yet published.)*
+
+# Acknowledgements
+
+This work was supported by **CHIST-ERA** grant **CHIST-ERA-22-ORD-02**.
