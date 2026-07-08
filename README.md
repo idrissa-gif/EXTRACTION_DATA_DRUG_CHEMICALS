@@ -185,3 +185,6 @@ The fine-tuned models (MLMs and LLMs) are uploaded to the HuggingFace repository
 # Acknowledgements
 
 This work was supported by **CHIST-ERA** grant **CHIST-ERA-22-ORD-02**.
+
+<img width="1000" height="667" alt="image" src="https://github.com/user-attachments/assets/9429150a-d1a5-48f8-922e-5c537af3adbe" />
+
